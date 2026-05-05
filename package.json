@@ -1,0 +1,17 @@
+{
+  "name": "yueduqi",
+  "version": "1.0.0",
+  "description": "基于 Legado 原理的简化版多书源小说阅读器",
+  "private": true,
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "dev": "concurrently -n server,client -c blue,green \"cd server && npm run dev\" \"cd client && npm run dev\"",
+    "build": "cd client && npm run build && cd ../server && npm run build",
+    "start": "npm run dev",
+    "docker:build": "docker build -t yueduqi .",
+    "docker:run": "docker run -p 3001:3001 yueduqi"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
