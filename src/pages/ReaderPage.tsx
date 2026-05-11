@@ -85,7 +85,7 @@ export default function ReaderPage() {
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
             title={theme === 'light' ? '切换夜间模式' : '切换日间模式'}
           >
-            {theme === 'light' ? '🌙' : '☀️'}
+            {theme === 'light' ? '暗' : '亮'}
           </button>
         </div>
       </div>

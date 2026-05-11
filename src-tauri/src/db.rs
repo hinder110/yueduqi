@@ -12,7 +12,12 @@ pub struct HistoryEntry {
 
 /// Initialize database and create tables
 pub fn init_db() -> Result<Connection, String> {
-    let conn = Connection::open("yueduqi.db").map_err(|e| format!("数据库打开失败: {}", e))?;
+    // Place db outside src-tauri/ to avoid Tauri file-watch rebuild loop
+    let db_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("yueduqi.db");
+    let conn = Connection::open(&db_path).map_err(|e| format!("数据库打开失败: {}", e))?;
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")
         .map_err(|e| format!("PRAGMA设置失败: {}", e))?;
     Ok(conn)

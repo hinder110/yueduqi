@@ -126,16 +126,9 @@ export default function SearchPage() {
           {results.map((r) => (
             <span
               key={r.source}
-              style={{
-                display: 'inline-block',
-                marginRight: 10,
-                padding: '2px 8px',
-                borderRadius: 4,
-                background: r.error ? '#fff0f0' : '#f0fff0',
-                color: r.error ? '#c00' : '#080',
-              }}
+              className={`source-status ${r.error ? 'error' : 'success'}`}
             >
-              {r.source}: {r.error ? r.error : `${r.books.length} 本`}
+              {r.source}: {r.error ? r.error : `${r.books.length} books`}
             </span>
           ))}
         </div>
