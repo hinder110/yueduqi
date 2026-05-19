@@ -1,6 +1,30 @@
 services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: yueduqi
+      POSTGRES_PASSWORD: yueduqi123
+      POSTGRES_DB: yueduqi
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
   yueduqi:
     build: .
     ports:
-      - '3000:3000'
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: yueduqi
+      DB_USER: yueduqi
+      DB_PASSWORD: yueduqi123
+      JWT_SECRET: change-me-in-production
+    depends_on:
+      - db
     restart: unless-stopped
+
+volumes:
+  pgdata:

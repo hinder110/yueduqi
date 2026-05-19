@@ -26,7 +26,8 @@ RUN npm ci --omit=dev
 
 COPY --from=server-build /build/server/dist ./dist
 COPY --from=client-build /build/client/dist ./client/dist
+COPY server/docker-entrypoint.sh ./
 
 USER node
 EXPOSE 3000
-CMD ["node", "dist/index.js"]
+CMD ["sh", "./docker-entrypoint.sh"]
