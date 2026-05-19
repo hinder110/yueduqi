@@ -5,6 +5,7 @@ import { searchBooks, getChapters, getChapterContent } from './parsers/index';
 import type { SourceKey } from './parsers/index';
 import { getHotBooks } from './bookParser';
 import type { ApiResponse, Book, Chapter, ChapterContent } from './types';
+import { cacheGet, cacheSet } from './cache';
 import authRouter from './routes/auth';
 import bookshelfRouter from './routes/bookshelf';
 
@@ -43,8 +44,17 @@ app.get('/api/search', async (req, res) => {
   }
 
   const source = getSource(req.query);
+  const cacheKey = `search:${source}:${keyword}`;
+
   try {
+    const cached = await cacheGet<Book[]>(cacheKey);
+    if (cached) {
+      res.json({ success: true, data: cached } as ApiResponse<Book[]>);
+      return;
+    }
+
     const books = await searchBooks({ source, keyword });
+    await cacheSet(cacheKey, books, 1800); // 30 min
     const body: ApiResponse<Book[]> = { success: true, data: books };
     res.json(body);
   } catch (err: unknown) {
@@ -57,8 +67,17 @@ app.get('/api/search', async (req, res) => {
 
 /** GET /api/hot — 热门推荐（仅光遇支持） */
 app.get('/api/hot', async (_req, res) => {
+  const cacheKey = 'hot';
+
   try {
+    const cached = await cacheGet<Book[]>(cacheKey);
+    if (cached) {
+      res.json({ success: true, data: cached } as ApiResponse<Book[]>);
+      return;
+    }
+
     const books = await getHotBooks();
+    await cacheSet(cacheKey, books, 1800); // 30 min
     const body: ApiResponse<Book[]> = { success: true, data: books };
     res.json(body);
   } catch (err: unknown) {
@@ -79,13 +98,19 @@ app.get('/api/chapters', async (req, res) => {
   }
 
   const source = getSource(req.query);
+  const innerSource = String(req.query.innerSource ?? '番茄');
+  const innerTab = String(req.query.innerTab ?? '小说');
+  const cacheKey = `chapters:${source}:${bookId}:${innerSource}:${innerTab}`;
+
   try {
-    const chapters = await getChapters({
-      source,
-      bookId,
-      innerSource: String(req.query.innerSource ?? '番茄'),
-      innerTab: String(req.query.innerTab ?? '小说'),
-    });
+    const cached = await cacheGet<Chapter[]>(cacheKey);
+    if (cached) {
+      res.json({ success: true, data: cached } as ApiResponse<Chapter[]>);
+      return;
+    }
+
+    const chapters = await getChapters({ source, bookId, innerSource, innerTab });
+    await cacheSet(cacheKey, chapters, 3600); // 1 hour
     const body: ApiResponse<Chapter[]> = { success: true, data: chapters };
     res.json(body);
   } catch (err: unknown) {
@@ -107,14 +132,19 @@ app.get('/api/content', async (req, res) => {
   }
 
   const source = getSource(req.query);
+  const innerSource = String(req.query.innerSource ?? '番茄');
+  const innerTab = String(req.query.innerTab ?? '小说');
+  const cacheKey = `content:${source}:${bookId}:${itemId}:${innerSource}:${innerTab}`;
+
   try {
-    const content = await getChapterContent({
-      source,
-      bookId,
-      itemId,
-      innerSource: String(req.query.innerSource ?? '番茄'),
-      innerTab: String(req.query.innerTab ?? '小说'),
-    });
+    const cached = await cacheGet<ChapterContent>(cacheKey);
+    if (cached) {
+      res.json({ success: true, data: cached } as ApiResponse<ChapterContent>);
+      return;
+    }
+
+    const content = await getChapterContent({ source, bookId, itemId, innerSource, innerTab });
+    await cacheSet(cacheKey, content, 86400); // 24 hours
     const body: ApiResponse<ChapterContent> = { success: true, data: content };
     res.json(body);
   } catch (err: unknown) {

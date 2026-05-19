@@ -9,6 +9,10 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
   yueduqi:
     build: .
     ports:
@@ -21,9 +25,12 @@ services:
       DB_NAME: yueduqi
       DB_USER: yueduqi
       DB_PASSWORD: yueduqi123
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
       JWT_SECRET: change-me-in-production
     depends_on:
       - db
+      - redis
     restart: unless-stopped
 
 volumes:
