@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchSearch, fetchHotBooks } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 import type { Book } from '../types';
 
 const SOURCES = [
@@ -19,6 +20,7 @@ export default function SearchPage() {
   const [hotLoading, setHotLoading] = useState(true);
   const [currentSource, setCurrentSource] = useState<string>('guangyu');
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     loadHotBooks();
@@ -75,6 +77,25 @@ export default function SearchPage() {
     <div className="page search-page">
       <header className="header">
         <h1>阅读器</h1>
+        <div className="header-actions">
+          {user ? (
+            <>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', alignSelf: 'center' }}>
+                {user.username}
+              </span>
+              <button className="header-btn" onClick={() => navigate('/bookshelf')}>
+                书架
+              </button>
+              <button className="header-btn" onClick={logout}>
+                退出
+              </button>
+            </>
+          ) : (
+            <button className="header-btn" onClick={() => navigate('/login')}>
+              登录
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="source-selector">

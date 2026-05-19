@@ -29,3 +29,26 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
+
+export interface User {
+  id: string;
+  username: string;
+}
+
+export interface LoginData {
+  token: string;
+  user: User;
+}
+
+export interface BookshelfItem {
+  id: number;
+  title: string;
+  author: string;
+  cover: string;
+  intro: string;
+  bookId: string;
+  sourceKey: string;
+  addedAt: string;
+  chapterIndex: number;
+  chapterItemId: string;
+}

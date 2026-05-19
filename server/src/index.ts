@@ -5,6 +5,8 @@ import { searchBooks, getChapters, getChapterContent } from './parsers/index';
 import type { SourceKey } from './parsers/index';
 import { getHotBooks } from './bookParser';
 import type { ApiResponse, Book, Chapter, ChapterContent } from './types';
+import authRouter from './routes/auth';
+import bookshelfRouter from './routes/bookshelf';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
@@ -18,6 +20,12 @@ if (isProduction) {
 
 app.use(cors());
 app.use(express.json());
+
+// 认证路由
+app.use('/api/auth', authRouter);
+
+// 书架路由（需要认证）
+app.use('/api/bookshelf', bookshelfRouter);
 
 function getSource(query: Record<string, unknown>): SourceKey {
   const s = String(query.source ?? 'guangyu');
