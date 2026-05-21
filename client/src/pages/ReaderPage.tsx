@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { fetchContent } from '../api';
+import { fetchContent, fetchBookshelf, updateProgress } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 import type { Book, Chapter, ChapterContent } from '../types';
 
 type Theme = 'light' | 'dark';
@@ -12,6 +13,7 @@ const FONT_NEXT: Record<FontSize, FontSize> = { sm: 'md', md: 'lg', lg: 'sm' };
 export default function ReaderPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const book = location.state?.book as Book | undefined;
   const initialChapter = location.state?.chapter as Chapter | undefined;
@@ -24,6 +26,9 @@ export default function ReaderPage() {
   const [error, setError] = useState('');
   const [theme, setTheme] = useState<Theme>('light');
   const [fontSize, setFontSize] = useState<FontSize>('md');
+  const preloaded = useRef<Map<string, ChapterContent>>(new Map());
+  const shelfBookId = useRef<number | null>(null);
+  const progressSynced = useRef(false);
 
   const currentChapter = chapters ? chapters[currentIndex] : initialChapter;
 
@@ -32,6 +37,16 @@ export default function ReaderPage() {
       if (!book) return;
       setLoading(true);
       setError('');
+
+      // 检查是否已预加载
+      const cached = preloaded.current.get(ch.itemId);
+      if (cached) {
+        setContent(cached);
+        preloaded.current.delete(ch.itemId);
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetchContent(book.bookId, ch.itemId, book.sourceKey, book.source, book.tab);
         if (res.success && res.data) {
@@ -48,6 +63,50 @@ export default function ReaderPage() {
     [book]
   );
 
+  // 预加载下一章
+  const preloadNextChapter = useCallback(
+    async (index: number) => {
+      if (!book || !chapters) return;
+      const nextIndex = index + 1;
+      if (nextIndex >= chapters.length) return;
+      const nextCh = chapters[nextIndex];
+      if (preloaded.current.has(nextCh.itemId)) return;
+      try {
+        const res = await fetchContent(book.bookId, nextCh.itemId, book.sourceKey, book.source, book.tab);
+        if (res.success && res.data) {
+          preloaded.current.set(nextCh.itemId, res.data);
+        }
+      } catch {
+        // 预加载失败不影响当前阅读
+      }
+    },
+    [book, chapters]
+  );
+
+  // 查找书架条目并同步阅读进度
+  const syncProgress = useCallback(
+    async (index: number) => {
+      if (!user || !book || !chapters) return;
+      const ch = chapters[index];
+      if (!ch) return;
+      try {
+        if (shelfBookId.current === null) {
+          const res = await fetchBookshelf();
+          if (res.success && res.data) {
+            const found = res.data.find((item) => item.bookId === book.bookId);
+            if (found) shelfBookId.current = found.id;
+          }
+        }
+        if (shelfBookId.current !== null) {
+          await updateProgress(shelfBookId.current, index, ch.itemId);
+        }
+      } catch {
+        // 进度同步失败不影响阅读
+      }
+    },
+    [user, book, chapters]
+  );
+
   useEffect(() => {
     if (!book || !currentChapter) {
       navigate('/', { replace: true });
@@ -56,11 +115,22 @@ export default function ReaderPage() {
     loadContent(currentChapter);
   }, [currentChapter]);
 
+  // 内容加载完成后：同步进度 + 预加载下一章
+  useEffect(() => {
+    if (!content || !book) return;
+    if (!progressSynced.current) {
+      syncProgress(currentIndex);
+      progressSynced.current = true;
+    }
+    preloadNextChapter(currentIndex);
+  }, [content]);
+
   function goToChapter(index: number) {
     if (!chapters || index < 0 || index >= chapters.length) return;
     setCurrentIndex(index);
     setContent(null);
     window.scrollTo(0, 0);
+    syncProgress(index);
   }
 
   if (!book || !currentChapter) return null;
