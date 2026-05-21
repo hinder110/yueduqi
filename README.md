@@ -1,5 +1,50 @@
 # 阅读器 (YueDuQi) 开发报告
 
+## 快速开始
+
+### Docker 一键部署
+
+```bash
+git clone https://github.com/hinder110/yueduqi.git
+cd yueduqi
+podman compose up -d
+```
+
+访问 `http://localhost:3000`
+
+### 本地开发
+
+需要 Node.js 18+、PostgreSQL 17、Redis 7
+
+```bash
+# 数据库
+podman run -d --name yueduqi-db -p 5432:5432 \
+  -e POSTGRES_USER=yueduqi -e POSTGRES_PASSWORD=yueduqi123 \
+  -e POSTGRES_DB=yueduqi docker.io/library/postgres:17-alpine
+
+# 缓存
+podman run -d --name yueduqi-redis -p 6379:6379 \
+  docker.io/library/redis:7-alpine
+
+# 后端
+cd server && npm install && npx tsx src/index.ts
+
+# 前端（新终端）
+cd client && npm install && npm run dev
+```
+
+后端 `http://localhost:3001`，前端 `http://localhost:3000`（已代理 /api）
+
+### 技术栈
+
+| 层 | Web 版 | Tauri 桌面版 |
+|------|----------|-------------|
+| 前端 | React 19 + TypeScript + Vite | React 19 + TypeScript + Vite |
+| 后端 | Express + PostgreSQL + Redis | Rust (tokio, reqwest, rusqlite) |
+| 部署 | Docker / Podman Compose | 单一 .exe 二进制 |
+
+---
+
 ## 一、项目概述
 
 **阅读器 (YueDuQi)** 是一个桌面/Web 双平台小说阅读应用，灵感来源于开源阅读软件 [Legado（阅读）](https://github.com/gedoor/legado)。
