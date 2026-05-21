@@ -71,27 +71,29 @@ export default function BookshelfPage() {
         <div className="message empty">书架空空如也，去搜索页面添加书籍吧</div>
       )}
 
-      <div className="bookshelf-list">
+      <div className="bookshelf-grid">
         {items.map((book) => (
-          <div key={book.id} className="bookshelf-item">
-            <div className="bookshelf-main" onClick={() => handleOpen(book)}>
-              {book.cover && (
-                <img src={book.cover} alt={book.title} className="bookshelf-cover" />
-              )}
-              <div className="bookshelf-info">
-                <h3>{book.title}</h3>
-                {book.author && <span className="book-author">{book.author}</span>}
-                {book.chapterIndex > 0 && (
-                  <span className="progress-hint">已读到第 {book.chapterIndex} 章</span>
-                )}
-              </div>
-            </div>
+          <div key={book.id} className="bookshelf-card">
             <button
-              className="bookshelf-remove"
-              onClick={() => handleRemove(book.id)}
+              className="bookshelf-remove-btn"
+              onClick={(e) => { e.stopPropagation(); handleRemove(book.id); }}
             >
-              移除
+              ✕
             </button>
+            <div className="bookshelf-card-inner" onClick={() => handleOpen(book)}>
+              {book.cover ? (
+                <img src={book.cover} alt={book.title} className="bookshelf-card-cover" />
+              ) : (
+                <div className="bookshelf-card-cover bookshelf-card-cover--placeholder" />
+              )}
+              <h3 className="bookshelf-card-title">{book.title}</h3>
+              {book.author && (
+                <span className="bookshelf-card-author">{book.author}</span>
+              )}
+              {book.chapterIndex > 0 && (
+                <span className="progress-hint">已读至第 {book.chapterIndex} 章</span>
+              )}
+            </div>
           </div>
         ))}
       </div>
