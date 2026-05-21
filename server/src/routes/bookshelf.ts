@@ -85,7 +85,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 // DELETE /api/bookshelf/:bookId — 移出书架
 router.delete('/:bookId', requireAuth, async (req: Request, res: Response) => {
   const { userId } = (req as any).user;
-  const bookId = parseInt(req.params.bookId);
+  const bookId = parseInt(String(req.params.bookId));
 
   try {
     await pool.query(
@@ -102,7 +102,7 @@ router.delete('/:bookId', requireAuth, async (req: Request, res: Response) => {
 // PUT /api/bookshelf/:bookId/progress — 更新阅读进度
 router.put('/:bookId/progress', requireAuth, async (req: Request, res: Response) => {
   const { userId } = (req as any).user;
-  const bookId = parseInt(req.params.bookId);
+  const bookId = parseInt(String(req.params.bookId));
   const { chapterIndex, chapterItemId } = req.body;
 
   try {

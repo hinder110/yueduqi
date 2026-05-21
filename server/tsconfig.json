@@ -9,5 +9,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true
-  }
+  },
+  "exclude": ["vitest.config.ts", "**/*.test.ts", "node_modules", "dist"]
 }
