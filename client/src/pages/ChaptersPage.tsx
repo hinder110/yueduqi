@@ -111,7 +111,13 @@ export default function ChaptersPage() {
         </div>
       </div>
 
-      {loading && <div className="message loading">加载中...</div>}
+      {loading && (
+        <div className="chapter-list">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="skeleton skeleton-item" />
+          ))}
+        </div>
+      )}
       {error && <div className="message error">{error}</div>}
 
       <div className="section-header">

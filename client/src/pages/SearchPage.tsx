@@ -129,11 +129,24 @@ export default function SearchPage() {
         </button>
       </div>
 
-      {loading && <div className="message loading">搜索中...</div>}
+      {loading && (
+        <div className="book-list">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton skeleton-cover" />
+              <div className="skeleton-lines">
+                <div className="skeleton skeleton-line" />
+                <div className="skeleton skeleton-line" />
+                <div className="skeleton skeleton-line" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {error && <div className="message error">{error}</div>}
 
       {/* 搜索结果列表 */}
-      {searched && (
+      {searched && !loading && (
         <>
           <div className="section-header">
             <button className="link-btn" onClick={handleBackToHot}>
@@ -141,30 +154,31 @@ export default function SearchPage() {
             </button>
             <span className="section-title">搜索结果</span>
           </div>
-          <div className="book-list">
-            {books.map((book) => (
-              <div
-                key={book.bookId}
-                className="book-card"
-                onClick={() => navigate('/chapters', { state: { book } })}
-              >
-                {book.cover && (
-                  <img src={book.cover} alt={book.title} className="book-cover" />
-                )}
-                <div className="book-info">
-                  <h3 className="book-title">{book.title}</h3>
-                  {book.author && <span className="book-author">{book.author}</span>}
-                  {book.kind && <span className="book-kind">{book.kind}</span>}
-                  {book.lastChapter && (
-                    <span className="book-last">最新: {book.lastChapter}</span>
+          {books.length > 0 ? (
+            <div className="book-list">
+              {books.map((book) => (
+                <div
+                  key={book.bookId}
+                  className="book-card"
+                  onClick={() => navigate('/chapters', { state: { book } })}
+                >
+                  {book.cover && (
+                    <img src={book.cover} alt={book.title} className="book-cover" />
                   )}
-                  {book.intro && <p className="book-intro">{book.intro}</p>}
+                  <div className="book-info">
+                    <h3 className="book-title">{book.title}</h3>
+                    {book.author && <span className="book-author">{book.author}</span>}
+                    {book.kind && <span className="book-kind">{book.kind}</span>}
+                    {book.lastChapter && (
+                      <span className="book-last">最新: {book.lastChapter}</span>
+                    )}
+                    {book.intro && <p className="book-intro">{book.intro}</p>}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-          {!loading && !error && books.length === 0 && (
-            <div className="message empty">暂无结果</div>
+              ))}
+            </div>
+          ) : (
+            !error && <div className="message empty">暂无结果</div>
           )}
         </>
       )}
@@ -173,8 +187,15 @@ export default function SearchPage() {
       {!searched && (
         <>
           <h2 className="section-title hot-title">🔥 热搜榜</h2>
-          {hotLoading && <div className="message loading">加载推荐中...</div>}
-          <div className="hot-grid">
+          {hotLoading && (
+            <div className="skeleton-grid">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="skeleton skeleton-grid-card" />
+              ))}
+            </div>
+          )}
+          {!hotLoading && (
+            <div className="hot-grid">
             {hotBooks.map((book) => (
               <div
                 key={book.bookId}
@@ -191,6 +212,7 @@ export default function SearchPage() {
               </div>
             ))}
           </div>
+          )}
         </>
       )}
     </div>
