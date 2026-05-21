@@ -1,40 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchBookshelf, removeFromBookshelf } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import { useAsync } from '../hooks/useAsync';
+import StatusMessage from '../components/StatusMessage';
 import type { BookshelfItem } from '../types';
 
 export default function BookshelfPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [items, setItems] = useState<BookshelfItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const shelf = useAsync<BookshelfItem[]>(fetchBookshelf, { immediate: true });
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login', { replace: true });
-      return;
-    }
-    loadShelf();
-  }, []);
-
-  async function loadShelf() {
-    setLoading(true);
-    setError('');
-    const res = await fetchBookshelf();
-    if (res.success && res.data) {
-      setItems(res.data);
-    } else {
-      setError(res.error ?? '加载书架失败');
-    }
-    setLoading(false);
-  }
+    if (!user) navigate('/login', { replace: true });
+  }, [user, navigate]);
 
   async function handleRemove(bookId: number) {
     const res = await removeFromBookshelf(bookId);
-    if (res.success) {
-      setItems((prev) => prev.filter((b) => b.id !== bookId));
+    if (res.success && shelf.data) {
+      shelf.setData(shelf.data.filter((b) => b.id !== bookId));
     }
   }
 
@@ -64,15 +48,15 @@ export default function BookshelfPage() {
         <h1>我的书架</h1>
       </header>
 
-      {loading && <div className="message loading">加载中...</div>}
-      {error && <div className="message error">{error}</div>}
-
-      {!loading && items.length === 0 && (
-        <div className="message empty">书架空空如也，去搜索页面添加书籍吧</div>
-      )}
+      <StatusMessage
+        loading={shelf.loading}
+        error={shelf.error}
+        empty={!shelf.loading && (shelf.data?.length ?? 0) === 0}
+        emptyText="书架空空如也，去搜索页面添加书籍吧"
+      />
 
       <div className="bookshelf-grid">
-        {items.map((book) => (
+        {shelf.data?.map((book) => (
           <div key={book.id} className="bookshelf-card">
             <button
               className="bookshelf-remove-btn"

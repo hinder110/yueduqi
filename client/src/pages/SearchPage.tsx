@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchSearch, fetchHotBooks } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAsync } from '../hooks/useAsync';
+import StatusMessage from '../components/StatusMessage';
+import BookCard from '../components/BookCard';
 import type { Book } from '../types';
 
 const SOURCES = [
@@ -13,61 +16,27 @@ const SOURCES = [
 
 export default function SearchPage() {
   const [keyword, setKeyword] = useState('');
-  const [books, setBooks] = useState<Book[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
-  const [hotBooks, setHotBooks] = useState<Book[]>([]);
-  const [hotLoading, setHotLoading] = useState(true);
   const [currentSource, setCurrentSource] = useState<string>('guangyu');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  useEffect(() => {
-    loadHotBooks();
-  }, []);
-
-  async function loadHotBooks() {
-    setHotLoading(true);
-    try {
-      const res = await fetchHotBooks();
-      if (res.success && res.data) {
-        setHotBooks(res.data);
-      }
-    } catch {
-      // 推荐加载失败不影响搜索功能
-    } finally {
-      setHotLoading(false);
-    }
-  }
+  const hotBooks = useAsync<Book[]>(fetchHotBooks, { immediate: true });
+  const search = useAsync<Book[]>();
 
   async function handleSearch() {
     const kw = keyword.trim();
     if (!kw) return;
-    setLoading(true);
-    setError('');
-    setBooks([]);
     setSearched(true);
-    try {
-      const res = await fetchSearch(kw, currentSource);
-      if (res.success && res.data) {
-        setBooks(res.data);
-        if (res.data.length === 0) setError('未找到相关书籍');
-      } else {
-        setError(res.error ?? '搜索失败');
-      }
-    } catch {
-      setError('请求异常，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
+    await search.execute(() => fetchSearch(kw, currentSource));
+    if (search.data?.length === 0) search.setError('未找到相关书籍');
   }
 
   function handleBackToHot() {
     setSearched(false);
-    setBooks([]);
-    setError('');
+    search.setData(null);
+    search.setError('');
     setKeyword('');
   }
 
@@ -124,29 +93,31 @@ export default function SearchPage() {
           placeholder="输入书名搜索..."
           autoFocus
         />
-        <button onClick={handleSearch} disabled={loading}>
-          {loading ? '搜索中...' : '搜索'}
+        <button onClick={handleSearch} disabled={search.loading}>
+          {search.loading ? '搜索中...' : '搜索'}
         </button>
       </div>
 
-      {loading && (
-        <div className="book-list">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="skeleton-card">
-              <div className="skeleton skeleton-cover" />
-              <div className="skeleton-lines">
-                <div className="skeleton skeleton-line" />
-                <div className="skeleton skeleton-line" />
-                <div className="skeleton skeleton-line" />
+      <StatusMessage
+        loading={search.loading}
+        loadingSkeleton={
+          <div className="book-list">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="skeleton-card">
+                <div className="skeleton skeleton-cover" />
+                <div className="skeleton-lines">
+                  <div className="skeleton skeleton-line" />
+                  <div className="skeleton skeleton-line" />
+                  <div className="skeleton skeleton-line" />
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-      {error && <div className="message error">{error}</div>}
+            ))}
+          </div>
+        }
+      />
 
       {/* 搜索结果列表 */}
-      {searched && !loading && (
+      {searched && !search.loading && (
         <>
           <div className="section-header">
             <button className="link-btn" onClick={handleBackToHot}>
@@ -154,32 +125,19 @@ export default function SearchPage() {
             </button>
             <span className="section-title">搜索结果</span>
           </div>
-          {books.length > 0 ? (
+          {search.data && search.data.length > 0 ? (
             <div className="book-list">
-              {books.map((book, i) => (
-                <div
+              {search.data.map((book, i) => (
+                <BookCard
                   key={book.bookId}
-                  className="book-card stagger-in"
-                  style={{ animationDelay: `${i * 50}ms` }}
+                  book={book}
+                  animationDelay={i * 50}
                   onClick={() => navigate('/chapters', { state: { book } })}
-                >
-                  {book.cover && (
-                    <img src={book.cover} alt={book.title} className="book-cover" />
-                  )}
-                  <div className="book-info">
-                    <h3 className="book-title">{book.title}</h3>
-                    {book.author && <span className="book-author">{book.author}</span>}
-                    {book.kind && <span className="book-kind">{book.kind}</span>}
-                    {book.lastChapter && (
-                      <span className="book-last">最新: {book.lastChapter}</span>
-                    )}
-                    {book.intro && <p className="book-intro">{book.intro}</p>}
-                  </div>
-                </div>
+                />
               ))}
             </div>
           ) : (
-            !error && <div className="message empty">暂无结果</div>
+            <StatusMessage empty emptyText="暂无结果" />
           )}
         </>
       )}
@@ -188,32 +146,35 @@ export default function SearchPage() {
       {!searched && (
         <>
           <h2 className="section-title hot-title">🔥 热搜榜</h2>
-          {hotLoading && (
-            <div className="skeleton-grid">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="skeleton skeleton-grid-card" />
+          <StatusMessage
+            loading={hotBooks.loading}
+            loadingSkeleton={
+              <div className="skeleton-grid">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="skeleton skeleton-grid-card" />
+                ))}
+              </div>
+            }
+          />
+          {!hotBooks.loading && hotBooks.data && (
+            <div className="hot-grid">
+              {hotBooks.data.map((book, i) => (
+                <div
+                  key={book.bookId}
+                  className="hot-card stagger-in"
+                  style={{ animationDelay: `${i * 40}ms` }}
+                  onClick={() => navigate('/chapters', { state: { book } })}
+                >
+                  <img
+                    src={book.cover}
+                    alt={book.title}
+                    className="hot-cover"
+                    loading="lazy"
+                  />
+                  <span className="hot-name">{book.title}</span>
+                </div>
               ))}
             </div>
-          )}
-          {!hotLoading && (
-            <div className="hot-grid">
-            {hotBooks.map((book, i) => (
-              <div
-                key={book.bookId}
-                className="hot-card stagger-in"
-                style={{ animationDelay: `${i * 40}ms` }}
-                onClick={() => navigate('/chapters', { state: { book } })}
-              >
-                <img
-                  src={book.cover}
-                  alt={book.title}
-                  className="hot-cover"
-                  loading="lazy"
-                />
-                <span className="hot-name">{book.title}</span>
-              </div>
-            ))}
-          </div>
           )}
         </>
       )}

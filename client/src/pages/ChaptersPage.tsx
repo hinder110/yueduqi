@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchChapters, fetchBookshelf, addToBookshelf } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import { useAsync } from '../hooks/useAsync';
+import StatusMessage from '../components/StatusMessage';
 import type { Book, Chapter, BookshelfItem } from '../types';
 
 export default function ChaptersPage() {
@@ -10,9 +12,7 @@ export default function ChaptersPage() {
   const book = location.state?.book as Book | undefined;
   const { user } = useAuth();
 
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const chapters = useAsync<Chapter[]>();
   const [addedToShelf, setAddedToShelf] = useState(false);
   const [shelfItem, setShelfItem] = useState<BookshelfItem | null>(null);
 
@@ -21,27 +21,9 @@ export default function ChaptersPage() {
       navigate('/', { replace: true });
       return;
     }
-    loadChapters();
+    chapters.execute(() => fetchChapters(book.bookId, book.sourceKey, book.source, book.tab));
     if (user) loadShelfInfo();
   }, []);
-
-  async function loadChapters() {
-    if (!book) return;
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetchChapters(book.bookId, book.sourceKey, book.source, book.tab);
-      if (res.success && res.data) {
-        setChapters(res.data);
-      } else {
-        setError(res.error ?? '加载章节失败');
-      }
-    } catch (e) {
-      setError('请求异常，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function loadShelfInfo() {
     if (!book || !user) return;
@@ -111,24 +93,27 @@ export default function ChaptersPage() {
         </div>
       </div>
 
-      {loading && (
-        <div className="chapter-list">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="skeleton skeleton-item" />
-          ))}
-        </div>
-      )}
-      {error && <div className="message error">{error}</div>}
+      <StatusMessage
+        loading={chapters.loading}
+        loadingSkeleton={
+          <div className="chapter-list">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="skeleton skeleton-item" />
+            ))}
+          </div>
+        }
+        error={chapters.error}
+      />
 
       <div className="section-header">
         <span className="section-title">目录</span>
         <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          共 {chapters.length} 章
+          共 {chapters.data?.length ?? 0} 章
         </span>
       </div>
 
       <div className="chapter-list">
-        {chapters.map((ch, i) => (
+        {chapters.data?.map((ch, i) => (
           <div
             key={ch.itemId}
             className="chapter-item stagger-in"
@@ -138,7 +123,7 @@ export default function ChaptersPage() {
                 state: {
                   book,
                   chapter: ch,
-                  chapters,
+                  chapters: chapters.data,
                   currentIndex: i,
                 },
               })
