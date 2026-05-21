@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanContent } from './bookParser';
+import { cleanContent, mapBookList, cleanBookName } from './bookParser';
 
 describe('cleanContent — 广告过滤', () => {
   // ========== 广告行过滤 ==========
@@ -75,5 +75,103 @@ describe('cleanContent — 广告过滤', () => {
     const input = '打赏\nVIP限时折扣\n联系作者xxx@gmail.com\n加电报群t.me/xxx';
     const result = cleanContent(input);
     expect(result).toBe('');
+  });
+});
+
+// ============================================================
+// mapBookList — API 返回数据 → Book 类型映射
+// ============================================================
+
+describe('mapBookList — 书籍数据映射', () => {
+  const sampleItem = {
+    book_name: '三体',
+    author: '刘慈欣',
+    thumb_url: 'https://example.com/cover.jpg',
+    abstract: '科幻巨作',
+    status: '完结',
+    score: '9.5',
+    tags: '科幻',
+    last_chapter_update_time: '2024-01-01',
+    source: '番茄',
+    last_chapter_title: '后记',
+    word_number: '200000',
+    book_id: '12345',
+    tab: '小说',
+  };
+
+  it('正常映射所有字段', () => {
+    const result = mapBookList([sampleItem]);
+    expect(result).toHaveLength(1);
+    const book = result[0];
+    expect(book.title).toBe('三体');
+    expect(book.author).toBe('刘慈欣');
+    expect(book.cover).toBe('https://example.com/cover.jpg');
+    expect(book.intro).toBe('科幻巨作');
+    expect(book.bookId).toBe('12345');
+    expect(book.sourceKey).toBe('guangyu');
+    expect(book.source).toBe('番茄');
+    expect(book.tab).toBe('小说');
+  });
+
+  it('kind 字段拼接多个信息', () => {
+    const result = mapBookList([sampleItem]);
+    expect(result[0].kind).toBe('完结 / 9.5 / 科幻 / 2024-01-01');
+  });
+
+  it('lastChapter 拼接 source 和章节标题', () => {
+    const result = mapBookList([sampleItem]);
+    expect(result[0].lastChapter).toBe('番茄 后记');
+  });
+
+  it('缺失字段使用默认值', () => {
+    const result = mapBookList([{}]);
+    const book = result[0];
+    expect(book.title).toBe('');
+    expect(book.author).toBe('');
+    expect(book.cover).toBe('');
+    expect(book.intro).toBe('');
+    expect(book.kind).toBe('');
+    expect(book.lastChapter).toBe('');
+    expect(book.bookId).toBe('');
+  });
+
+  it('空数组返回空', () => {
+    expect(mapBookList([])).toEqual([]);
+  });
+
+  it('多本书同时映射', () => {
+    const result = mapBookList([
+      { book_name: 'A', book_id: '1' },
+      { book_name: 'B', book_id: '2' },
+      { book_name: 'C', book_id: '3' },
+    ]);
+    expect(result).toHaveLength(3);
+    expect(result.map((b) => b.title)).toEqual(['A', 'B', 'C']);
+  });
+});
+
+// ============================================================
+// cleanBookName — 书名清洗
+// ============================================================
+
+describe('cleanBookName — 书名清洗', () => {
+  it('去除中文括号别名（别名：xxx）', () => {
+    expect(cleanBookName('三体（别名：地球往事）')).toBe('三体');
+  });
+
+  it('去除英文括号别名（别名:xxx）', () => {
+    expect(cleanBookName('三体(别名:地球往事)')).toBe('三体');
+  });
+
+  it('无括号书名原样返回', () => {
+    expect(cleanBookName('三体')).toBe('三体');
+  });
+
+  it('空字符串返回空', () => {
+    expect(cleanBookName('')).toBe('');
+  });
+
+  it('去除后首尾空格被 trim', () => {
+    expect(cleanBookName(' 三体 （别名：xxx） ')).toBe('三体');
   });
 });

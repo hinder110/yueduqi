@@ -67,7 +67,7 @@ export async function getHotBooks(): Promise<Book[]> {
 }
 
 /** 将光遇 API 返回的书籍 JSON 数组映射为 Book[] */
-function mapBookList(items: Record<string, unknown>[]): Book[] {
+export function mapBookList(items: Record<string, unknown>[]): Book[] {
   return items.map((item) => ({
     title: cleanBookName(String(item.book_name ?? '')),
     author: String(item.author ?? ''),
@@ -135,7 +135,7 @@ export async function getChapterContent(
   });
 }
 
-function cleanBookName(name: string): string {
+export function cleanBookName(name: string): string {
   return name.replace(/[（(]别名[：:].*?[）)]/, '').trim();
 }
 
