@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import StatusMessage from '../components/StatusMessage';
 
 export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
@@ -90,7 +91,7 @@ export default function LoginPage() {
           onKeyDown={handleKeyDown}
         />
 
-        {error && <div className="message error">{error}</div>}
+        <StatusMessage error={error} />
 
         <button className="auth-submit" onClick={handleSubmit} disabled={loading}>
           {loading ? '请稍候...' : isRegister ? '注册' : '登录'}

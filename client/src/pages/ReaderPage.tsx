@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchContent, fetchBookshelf, updateProgress } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import StatusMessage from '../components/StatusMessage';
 import type { Book, Chapter, ChapterContent } from '../types';
 
 type Theme = 'light' | 'dark';
@@ -168,8 +169,7 @@ export default function ReaderPage() {
       <h2 className="chapter-heading">{currentChapter.title}</h2>
 
       {/* 正文 */}
-      {loading && <div className="reader-status">加载中...</div>}
-      {error && <div className="reader-status error">{error}</div>}
+      <StatusMessage loading={loading} error={error} />
       {content && (
         <div className="content-body" dangerouslySetInnerHTML={{ __html: content.content }} />
       )}
