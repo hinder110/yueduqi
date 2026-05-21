@@ -131,7 +131,8 @@ export default function ChaptersPage() {
         {chapters.map((ch, i) => (
           <div
             key={ch.itemId}
-            className="chapter-item"
+            className="chapter-item stagger-in"
+            style={{ animationDelay: `${i * 30}ms` }}
             onClick={() =>
               navigate('/reader', {
                 state: {

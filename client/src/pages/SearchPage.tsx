@@ -156,10 +156,11 @@ export default function SearchPage() {
           </div>
           {books.length > 0 ? (
             <div className="book-list">
-              {books.map((book) => (
+              {books.map((book, i) => (
                 <div
                   key={book.bookId}
-                  className="book-card"
+                  className="book-card stagger-in"
+                  style={{ animationDelay: `${i * 50}ms` }}
                   onClick={() => navigate('/chapters', { state: { book } })}
                 >
                   {book.cover && (
@@ -196,10 +197,11 @@ export default function SearchPage() {
           )}
           {!hotLoading && (
             <div className="hot-grid">
-            {hotBooks.map((book) => (
+            {hotBooks.map((book, i) => (
               <div
                 key={book.bookId}
-                className="hot-card"
+                className="hot-card stagger-in"
+                style={{ animationDelay: `${i * 40}ms` }}
                 onClick={() => navigate('/chapters', { state: { book } })}
               >
                 <img
