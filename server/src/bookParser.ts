@@ -142,26 +142,26 @@ function cleanBookName(name: string): string {
 // 书源广告关键词，整行匹配则整行丢弃
 const AD_PATTERNS = [
   /打赏/,
-  /VIP|vip/,
+  /非\s*[Vv][Ii][Pp]\s*用户/,
+  /[Vv][Ii][Pp]\s*服务器/,
+  /开通\s*[Vv][Ii][Pp]/,
   /封禁/,
-  /缓存/,
-  /电报群/,
-  /telegram|t\.me/i,
+  /电报群|t\.me/i,
+  /telegram/i,
   /联系作者/,
   /后台页面/,
   /gmai?l\.com/,
   /限时折扣/,
   /恢复原价/,
   /删除普通账户/,
-  /开通/,
   /服务器压力/,
-  /纯净广告/,
+  /纯净/,
   /未登录.*访问/,
   /已访问.*次/,
-  /非VIP|非vip/,
+  /缓存操作/,
 ];
 
-function cleanContent(content: string): string {
+export function cleanContent(content: string): string {
   return content
     .replace(/\s*ident="[^"]*"/g, '')
     .split('\n')
