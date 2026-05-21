@@ -1,38 +1,15 @@
-import * as cheerio from 'cheerio';
-import http from 'http';
 import type { Book, Chapter, ChapterContent } from '../types';
-import { toAbsUrl } from '../utils';
+import { toAbsUrl, fetchHTML } from '../utils';
 import { cleanContent } from '../bookParser';
 
 const BASE = 'http://www.qixinge.net';
 
-function fetchHTML(url: string): Promise<cheerio.CheerioAPI> {
-  return new Promise((resolve, reject) => {
-    const u = new URL(url);
-    http.get(
-      {
-        hostname: u.hostname,
-        port: u.port || 80,
-        path: u.pathname + u.search,
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
-          Referer: BASE + '/',
-        },
-        timeout: 15000,
-      },
-      (res) => {
-        const chunks: Buffer[] = [];
-        res.on('data', (c: Buffer) => chunks.push(c));
-        res.on('end', () => resolve(cheerio.load(Buffer.concat(chunks).toString('utf8'))));
-        res.on('error', reject);
-      }
-    ).on('error', reject);
-  });
+function fetchPage(url: string) {
+  return fetchHTML(url, { referer: BASE + '/' });
 }
 
 export async function searchBooks(keyword: string): Promise<Book[]> {
-  const $ = await fetchHTML(
+  const $ = await fetchPage(
     `${BASE}/search.php?q=${encodeURIComponent(keyword)}&p=1`
   );
 
@@ -48,7 +25,6 @@ export async function searchBooks(keyword: string): Promise<Book[]> {
     if (!name || !href) return;
 
     const bookOthers = $(el).find('.book_other');
-    // book_other[0] = 作者：<span>xxx</span>
     const author = bookOthers.eq(0).find('span').first().text().trim();
 
     books.push({
@@ -67,7 +43,7 @@ export async function searchBooks(keyword: string): Promise<Book[]> {
 }
 
 export async function getChapters(bookUrl: string): Promise<Chapter[]> {
-  const $ = await fetchHTML(bookUrl);
+  const $ = await fetchPage(bookUrl);
 
   const chapters: Chapter[] = [];
   $('.book_list2 li a').each((_i, el) => {
@@ -83,19 +59,16 @@ export async function getChapters(bookUrl: string): Promise<Chapter[]> {
 }
 
 export async function getChapterContent(chapterUrl: string): Promise<ChapterContent> {
-  const $ = await fetchHTML(chapterUrl);
+  const $ = await fetchPage(chapterUrl);
 
   const rawTitle = $('h1').first().text().trim() || '';
   const title = rawTitle.replace(/-《.*》/, '').trim();
 
   const article = $('article.font_max');
-  // 先清理广告和脚本
   article.find('script, style, div, a').remove();
-  // <br> 转换行，再取文本
   article.find('br').replaceWith('\n');
   let text = article.text();
 
-  // 应用 replaceRegex 清理
   text = text
     .replace(/本章未完.*/g, '')
     .replace(/第\s*\(?\s*\d+\s*\/\s*\d+\s*\)?\s*页/g, '')
