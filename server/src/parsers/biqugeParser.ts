@@ -50,7 +50,7 @@ function fetchGBK(url: string, opts?: { body?: Buffer; method?: 'GET' | 'POST' }
   });
 }
 
-function toAbsUrl(path: string): string {
+export function toAbsUrl(path: string): string {
   if (!path) return '';
   if (path.startsWith('http')) return path;
   if (path.startsWith('/')) return BASE + path;

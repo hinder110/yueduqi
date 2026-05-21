@@ -29,7 +29,7 @@ function fetchHTML(url: string): Promise<cheerio.CheerioAPI> {
   });
 }
 
-function toAbsUrl(path: string): string {
+export function toAbsUrl(path: string): string {
   if (!path) return '';
   if (path.startsWith('http')) return path;
   if (path.startsWith('/')) return BASE + path;
