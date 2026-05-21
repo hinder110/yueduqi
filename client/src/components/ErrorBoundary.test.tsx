@@ -13,7 +13,7 @@ vi.stubGlobal('localStorage', {
   clear: vi.fn(() => { store.clear(); }),
 });
 
-function Explode() {
+function Explode(): React.ReactElement {
   throw new Error('模拟崩溃');
 }
 

@@ -8,6 +8,7 @@ import type { ApiResponse, Book, Chapter, ChapterContent } from './types';
 import { cacheGet, cacheSet } from './cache';
 import authRouter from './routes/auth';
 import bookshelfRouter from './routes/bookshelf';
+import migrate from './db/migrate';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
@@ -134,7 +135,14 @@ if (isProduction) {
 }
 
 if (!process.env.VITEST) {
-  app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+  migrate().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  }).catch((err) => {
+    console.error('迁移失败，仍尝试启动:', err.message);
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
   });
 }

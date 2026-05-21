@@ -40,14 +40,8 @@ CREATE TABLE IF NOT EXISTS reading_progress (
 );
 `;
 
-async function migrate() {
-  console.log('正在创建数据库表...');
+export default async function migrate() {
+  console.log('[migrate] 正在创建数据库表...');
   await pool.query(schema);
-  console.log('数据库表创建成功');
-  await pool.end();
+  console.log('[migrate] 数据库表就绪');
 }
-
-migrate().catch((err) => {
-  console.error('迁移失败:', err.message);
-  process.exit(1);
-});
