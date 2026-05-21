@@ -13,7 +13,6 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 
-// 生产模式：托管前端静态文件
 if (isProduction) {
   const clientDist = path.join(__dirname, '../client/dist');
   app.use(express.static(clientDist));
@@ -21,11 +20,7 @@ if (isProduction) {
 
 app.use(cors());
 app.use(express.json());
-
-// 认证路由
 app.use('/api/auth', authRouter);
-
-// 书架路由（需要认证）
 app.use('/api/bookshelf', bookshelfRouter);
 
 function getSource(query: Record<string, unknown>): SourceKey {
@@ -34,125 +29,100 @@ function getSource(query: Record<string, unknown>): SourceKey {
   return 'guangyu';
 }
 
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
+}
+
+/**
+ * 带缓存的 API 响应处理：
+ *   cacheKey → 命中直接返回 → 未命中 fetch → 写缓存 → 返回
+ */
+async function cached<T>(
+  res: express.Response,
+  cacheKey: string,
+  ttl: number,
+  fetch: () => Promise<T>,
+  logLabel: string,
+  fallbackError: string,
+) {
+  try {
+    const cached = await cacheGet<T>(cacheKey);
+    if (cached) {
+      res.json({ success: true, data: cached });
+      return;
+    }
+    const data = await fetch();
+    await cacheSet(cacheKey, data, ttl);
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    const msg = errorMessage(err, fallbackError);
+    console.error(`[${logLabel}]`, msg);
+    res.status(500).json({ success: false, error: msg });
+  }
+}
+
 /** GET /api/search?keyword=xxx&source=xxx */
 app.get('/api/search', async (req, res) => {
   const keyword = String(req.query.keyword ?? '').trim();
   if (!keyword) {
-    const body: ApiResponse<Book[]> = { success: false, error: '请输入搜索关键词' };
-    res.status(400).json(body);
+    res.status(400).json({ success: false, error: '请输入搜索关键词' });
     return;
   }
-
   const source = getSource(req.query);
-  const cacheKey = `search:${source}:${keyword}`;
-
-  try {
-    const cached = await cacheGet<Book[]>(cacheKey);
-    if (cached) {
-      res.json({ success: true, data: cached } as ApiResponse<Book[]>);
-      return;
-    }
-
-    const books = await searchBooks({ source, keyword });
-    await cacheSet(cacheKey, books, 1800); // 30 min
-    const body: ApiResponse<Book[]> = { success: true, data: books };
-    res.json(body);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : '搜索失败';
-    console.error('[searchBooks]', source, message);
-    const body: ApiResponse<Book[]> = { success: false, error: message };
-    res.status(500).json(body);
-  }
+  await cached<Book[]>(
+    res,
+    `search:${source}:${keyword}`,
+    1800,
+    () => searchBooks({ source, keyword }),
+    'searchBooks',
+    '搜索失败',
+  );
 });
 
-/** GET /api/hot — 热门推荐（仅光遇支持） */
-app.get('/api/hot', async (_req, res) => {
-  const cacheKey = 'hot';
+/** GET /api/hot */
+app.get('/api/hot', (_req, res) =>
+  cached<Book[]>(res, 'hot', 1800, getHotBooks, 'getHotBooks', '获取热门推荐失败'),
+);
 
-  try {
-    const cached = await cacheGet<Book[]>(cacheKey);
-    if (cached) {
-      res.json({ success: true, data: cached } as ApiResponse<Book[]>);
-      return;
-    }
-
-    const books = await getHotBooks();
-    await cacheSet(cacheKey, books, 1800); // 30 min
-    const body: ApiResponse<Book[]> = { success: true, data: books };
-    res.json(body);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : '获取热门推荐失败';
-    console.error('[getHotBooks]', message);
-    const body: ApiResponse<Book[]> = { success: false, error: message };
-    res.status(500).json(body);
-  }
-});
-
-/** GET /api/chapters?bookId=xxx&source=xxx[&innerSource=xxx&innerTab=xxx] */
+/** GET /api/chapters?bookId=xxx&source=xxx */
 app.get('/api/chapters', async (req, res) => {
   const bookId = String(req.query.bookId ?? '');
   if (!bookId) {
-    const body: ApiResponse<Chapter[]> = { success: false, error: '缺少 bookId 参数' };
-    res.status(400).json(body);
+    res.status(400).json({ success: false, error: '缺少 bookId 参数' });
     return;
   }
-
   const source = getSource(req.query);
-  const innerSource = String(req.query.innerSource ?? '番茄');
-  const innerTab = String(req.query.innerTab ?? '小说');
-  const cacheKey = `chapters:${source}:${bookId}:${innerSource}:${innerTab}`;
-
-  try {
-    const cached = await cacheGet<Chapter[]>(cacheKey);
-    if (cached) {
-      res.json({ success: true, data: cached } as ApiResponse<Chapter[]>);
-      return;
-    }
-
-    const chapters = await getChapters({ source, bookId, innerSource, innerTab });
-    await cacheSet(cacheKey, chapters, 3600); // 1 hour
-    const body: ApiResponse<Chapter[]> = { success: true, data: chapters };
-    res.json(body);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : '获取章节失败';
-    console.error('[getChapters]', source, message);
-    const body: ApiResponse<Chapter[]> = { success: false, error: message };
-    res.status(500).json(body);
-  }
+  const is = String(req.query.innerSource ?? '番茄');
+  const it = String(req.query.innerTab ?? '小说');
+  await cached<Chapter[]>(
+    res,
+    `chapters:${source}:${bookId}:${is}:${it}`,
+    3600,
+    () => getChapters({ source, bookId, innerSource: is, innerTab: it }),
+    'getChapters',
+    '获取章节失败',
+  );
 });
 
-/** GET /api/content?bookId=xxx&itemId=xxx&source=xxx[&innerSource=xxx&innerTab=xxx] */
+/** GET /api/content?bookId=xxx&itemId=xxx&source=xxx */
 app.get('/api/content', async (req, res) => {
   const bookId = String(req.query.bookId ?? '');
   const itemId = String(req.query.itemId ?? '');
   if (!bookId || !itemId) {
-    const body: ApiResponse<ChapterContent> = { success: false, error: '缺少 bookId 或 itemId 参数' };
-    res.status(400).json(body);
+    res.status(400).json({ success: false, error: '缺少 bookId 或 itemId 参数' });
     return;
   }
-
   const source = getSource(req.query);
-  const innerSource = String(req.query.innerSource ?? '番茄');
-  const innerTab = String(req.query.innerTab ?? '小说');
-  const cacheKey = `content:${source}:${bookId}:${itemId}:${innerSource}:${innerTab}`;
-
-  try {
-    const cached = await cacheGet<ChapterContent>(cacheKey);
-    if (cached) {
-      res.json({ success: true, data: cached } as ApiResponse<ChapterContent>);
-      return;
-    }
-
-    const content = await getChapterContent({ source, bookId, itemId, innerSource, innerTab });
-    await cacheSet(cacheKey, content, 86400); // 24 hours
-    const body: ApiResponse<ChapterContent> = { success: true, data: content };
-    res.json(body);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : '获取正文失败';
-    console.error('[getChapterContent]', source, message);
-    const body: ApiResponse<ChapterContent> = { success: false, error: message };
-    res.status(500).json(body);
-  }
+  const is = String(req.query.innerSource ?? '番茄');
+  const it = String(req.query.innerTab ?? '小说');
+  await cached<ChapterContent>(
+    res,
+    `content:${source}:${bookId}:${itemId}:${is}:${it}`,
+    86400,
+    () => getChapterContent({ source, bookId, itemId, innerSource: is, innerTab: it }),
+    'getChapterContent',
+    '获取正文失败',
+  );
 });
 
 // 生产模式：SPA 兜底，非 /api 请求返回 index.html

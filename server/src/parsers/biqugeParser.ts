@@ -2,6 +2,8 @@ import * as cheerio from 'cheerio';
 import iconv from 'iconv-lite';
 import http from 'http';
 import type { Book, Chapter, ChapterContent } from '../types';
+import { toAbsUrl } from '../utils';
+import { cleanContent } from '../bookParser';
 
 const BASE = 'http://m.biquge900.com';
 
@@ -50,13 +52,6 @@ function fetchGBK(url: string, opts?: { body?: Buffer; method?: 'GET' | 'POST' }
   });
 }
 
-export function toAbsUrl(path: string): string {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  if (path.startsWith('/')) return BASE + path;
-  return BASE + '/' + path.replace(/^\.\//, '');
-}
-
 export async function searchBooks(keyword: string): Promise<Book[]> {
   const prefix = Buffer.from('searchkey=', 'ascii');
   const suffix = Buffer.from('&t=1', 'ascii');
@@ -81,7 +76,7 @@ export async function searchBooks(keyword: string): Promise<Book[]> {
       author: a.find('.author').text().trim() || undefined,
       kind: a.find('.review').text().trim() || undefined,
       lastChapter: undefined,
-      bookId: toAbsUrl(href),
+      bookId: toAbsUrl(href, BASE),
       sourceKey: 'biquge900',
       source: 'biquge900',
       tab: '',
@@ -101,7 +96,7 @@ export async function getChapters(bookUrl: string): Promise<Chapter[]> {
     if (!href || !title) return;
     chapters.push({
       title,
-      itemId: toAbsUrl(href),
+      itemId: toAbsUrl(href, BASE),
     });
   });
   return chapters;
@@ -120,23 +115,14 @@ export async function getChapterContent(chapterUrl: string): Promise<ChapterCont
 
   const cleaned = raw
     .replace(/笔趣阁最新域名：/g, '')
-    .replace(/，请牢记本域名并相互转告！\s*/g, '')
-    .replace(/https?:\/\/[^\s]*/g, '')
-    .replace(/www\.[^\s]*/g, '')
-    .replace(/[ \t]{2,}/g, '') // 去除 &nbsp; 转换来的多余缩进空格
+    .replace(/，请牢记本域名并相互转告！[^\S\n]*/g, '')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/www\.\S+/g, '')
+    .replace(/[ \t]{2,}/g, '')
     .trim();
 
   return {
     title,
     content: cleanContent(cleaned),
   };
-}
-
-function cleanContent(text: string): string {
-  return text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => `<p>${line}</p>`)
-    .join('\n');
 }

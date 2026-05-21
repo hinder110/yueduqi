@@ -9,3 +9,10 @@ export const httpClient: AxiosInstance = axios.create({
     'User-Agent': USER_AGENT,
   },
 });
+
+export function toAbsUrl(path: string, base: string): string {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  if (path.startsWith('/')) return base + path;
+  return base + '/' + path;
+}

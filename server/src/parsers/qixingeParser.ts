@@ -1,6 +1,8 @@
 import * as cheerio from 'cheerio';
 import http from 'http';
 import type { Book, Chapter, ChapterContent } from '../types';
+import { toAbsUrl } from '../utils';
+import { cleanContent } from '../bookParser';
 
 const BASE = 'http://www.qixinge.net';
 
@@ -29,13 +31,6 @@ function fetchHTML(url: string): Promise<cheerio.CheerioAPI> {
   });
 }
 
-export function toAbsUrl(path: string): string {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  if (path.startsWith('/')) return BASE + path;
-  return BASE + '/' + path;
-}
-
 export async function searchBooks(keyword: string): Promise<Book[]> {
   const $ = await fetchHTML(
     `${BASE}/search.php?q=${encodeURIComponent(keyword)}&p=1`
@@ -59,10 +54,10 @@ export async function searchBooks(keyword: string): Promise<Book[]> {
     books.push({
       title: name,
       author: author || undefined,
-      cover: toAbsUrl(coverImg || ''),
+      cover: toAbsUrl(coverImg || '', BASE),
       kind: bookOthers.eq(1).text().replace(/.*：/, '').trim() || undefined,
       lastChapter: bookOthers.eq(3).find('a').text().trim() || undefined,
-      bookId: toAbsUrl(href),
+      bookId: toAbsUrl(href, BASE),
       sourceKey: 'qixinge',
       source: 'qixinge',
       tab: '',
@@ -81,7 +76,7 @@ export async function getChapters(bookUrl: string): Promise<Chapter[]> {
     if (!href || !title) return;
     chapters.push({
       title,
-      itemId: toAbsUrl(href),
+      itemId: toAbsUrl(href, BASE),
     });
   });
   return chapters;
@@ -111,13 +106,4 @@ export async function getChapterContent(chapterUrl: string): Promise<ChapterCont
     title,
     content: cleanContent(text),
   };
-}
-
-function cleanContent(text: string): string {
-  return text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => `<p>${line}</p>`)
-    .join('\n');
 }
