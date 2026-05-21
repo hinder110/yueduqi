@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchSearch, fetchHotBooks } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import type { Book } from '../types';
 
 const SOURCES = [
@@ -21,6 +22,7 @@ export default function SearchPage() {
   const [currentSource, setCurrentSource] = useState<string>('guangyu');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     loadHotBooks();
@@ -78,6 +80,9 @@ export default function SearchPage() {
       <header className="header">
         <h1>阅读器</h1>
         <div className="header-actions">
+          <button className="header-btn" onClick={toggleTheme} title="切换主题">
+            {theme === 'light' ? '☀' : '☾'}
+          </button>
           {user ? (
             <>
               <span style={{ fontSize: 13, color: 'var(--text-secondary)', alignSelf: 'center' }}>
