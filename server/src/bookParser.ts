@@ -139,12 +139,38 @@ function cleanBookName(name: string): string {
   return name.replace(/[（(]别名[：:].*?[）)]/, '').trim();
 }
 
+// 书源广告关键词，整行匹配则整行丢弃
+const AD_PATTERNS = [
+  /打赏/,
+  /VIP|vip/,
+  /封禁/,
+  /缓存/,
+  /电报群/,
+  /telegram|t\.me/i,
+  /联系作者/,
+  /后台页面/,
+  /gmai?l\.com/,
+  /限时折扣/,
+  /恢复原价/,
+  /删除普通账户/,
+  /开通/,
+  /服务器压力/,
+  /纯净广告/,
+  /未登录.*访问/,
+  /已访问.*次/,
+  /非VIP|非vip/,
+];
+
 function cleanContent(content: string): string {
   return content
     .replace(/\s*ident="[^"]*"/g, '')
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
+    .filter((line) => {
+      // 过滤广告行：整行匹配任一广告模式则丢弃
+      return !AD_PATTERNS.some((p) => p.test(line));
+    })
     .map((line) => `<p>${line}</p>`)
     .join('\n');
 }
