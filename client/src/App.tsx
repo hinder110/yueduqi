@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import SearchPage from './pages/SearchPage';
 import ChaptersPage from './pages/ChaptersPage';
 import ReaderPage from './pages/ReaderPage';
@@ -8,8 +9,9 @@ import BookshelfPage from './pages/BookshelfPage';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <Routes>
         <Route path="/" element={<SearchPage />} />
         <Route path="/chapters" element={<ChaptersPage />} />
         <Route path="/reader" element={<ReaderPage />} />
@@ -17,6 +19,7 @@ export default function App() {
         <Route path="/bookshelf" element={<BookshelfPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
