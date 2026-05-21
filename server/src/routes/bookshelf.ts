@@ -1,31 +1,8 @@
 import { Router, type Request, type Response } from 'express';
-import jwt from 'jsonwebtoken';
 import pool from '../db';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'yueduqi-dev-secret';
-
-/** 从请求头提取用户信息 */
-function getUser(req: Request): { userId: string; username: string } | null {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) return null;
-  try {
-    return jwt.verify(header.slice(7), JWT_SECRET) as any;
-  } catch {
-    return null;
-  }
-}
-
-// --- 认证中间件 ---
-function requireAuth(req: Request, res: Response, next: Function) {
-  const user = getUser(req);
-  if (!user) {
-    res.status(401).json({ success: false, error: '请先登录' });
-    return;
-  }
-  (req as any).user = user;
-  next();
-}
 
 // 缓存或查找书籍：先查 books 表，没有就插入
 async function upsertBook(book: {

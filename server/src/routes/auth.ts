@@ -2,10 +2,9 @@ import { Router, type Request, type Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../db';
+import { JWT_SECRET, TOKEN_EXPIRY } from '../config';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'yueduqi-dev-secret';
-const TOKEN_EXPIRY = '7d';
 
 interface AuthBody {
   username: string;
