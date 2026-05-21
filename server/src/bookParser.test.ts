@@ -118,9 +118,19 @@ describe('mapBookList — 书籍数据映射', () => {
     expect(result[0].kind).toBe('完结 / 9.5 / 科幻 / 2024-01-01');
   });
 
+  it('kind 只拼非空值', () => {
+    const result = mapBookList([{ book_name: 'A', status: '连载' }]);
+    expect(result[0].kind).toBe('连载');
+  });
+
   it('lastChapter 拼接 source 和章节标题', () => {
     const result = mapBookList([sampleItem]);
     expect(result[0].lastChapter).toBe('番茄 后记');
+  });
+
+  it('lastChapter 无 source 时不显示多余空格', () => {
+    const result = mapBookList([{ book_name: 'A', last_chapter_title: '后记' }]);
+    expect(result[0].lastChapter).toBe('后记');
   });
 
   it('缺失字段使用默认值', () => {
@@ -147,6 +157,11 @@ describe('mapBookList — 书籍数据映射', () => {
     ]);
     expect(result).toHaveLength(3);
     expect(result.map((b) => b.title)).toEqual(['A', 'B', 'C']);
+  });
+
+  it('书名为数字时转为字符串', () => {
+    const result = mapBookList([{ book_name: 123 }]);
+    expect(result[0].title).toBe('123');
   });
 });
 
