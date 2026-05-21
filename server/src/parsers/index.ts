@@ -56,7 +56,7 @@ export async function searchBooks(opts: SearchOptions): Promise<Book[]> {
 }
 
 /** 把光遇搜索结果的封面和简介按书名模糊匹配，合并到笔趣阁结果中 */
-function mergeCovers(target: Book[], supplement: Book[]): Book[] {
+export function mergeCovers(target: Book[], supplement: Book[]): Book[] {
   if (supplement.length === 0) return target;
   return target.map((book) => {
     const match = supplement.find((s) => fuzzyMatch(book.title, s.title));
@@ -67,14 +67,14 @@ function mergeCovers(target: Book[], supplement: Book[]): Book[] {
   });
 }
 
-function fuzzyMatch(a: string, b: string): boolean {
+export function fuzzyMatch(a: string, b: string): boolean {
   const na = normalizeName(a);
   const nb = normalizeName(b);
   if (!na || !nb) return false;
   return na === nb || na.includes(nb) || nb.includes(na);
 }
 
-function normalizeName(s: string): string {
+export function normalizeName(s: string): string {
   return s
     .replace(/[（(].*?[）)]/g, '')  // 去掉括号内容
     .replace(/[^一-龥a-zA-Z0-9]/g, '')  // 只保留中英文字母数字
