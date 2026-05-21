@@ -23,13 +23,13 @@ app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/bookshelf', bookshelfRouter);
 
-function getSource(query: Record<string, unknown>): SourceKey {
+export function getSource(query: Record<string, unknown>): SourceKey {
   const s = String(query.source ?? 'guangyu');
   if (s === 'biquge900' || s === 'qixinge') return s;
   return 'guangyu';
 }
 
-function errorMessage(err: unknown, fallback: string): string {
+export function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
@@ -37,7 +37,7 @@ function errorMessage(err: unknown, fallback: string): string {
  * 带缓存的 API 响应处理：
  *   cacheKey → 命中直接返回 → 未命中 fetch → 写缓存 → 返回
  */
-async function cached<T>(
+export async function cached<T>(
   res: express.Response,
   cacheKey: string,
   ttl: number,
@@ -133,6 +133,8 @@ if (isProduction) {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+if (!process.env.VITEST) {
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+  });
+}
